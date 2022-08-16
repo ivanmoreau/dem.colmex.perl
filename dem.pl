@@ -46,7 +46,7 @@ if (-e $file && !$ignorecacheopt) {
   $datahtml = `$command`;
 
   # Does the term exist in the dictionary?
-  if ($datahtml =~ /no se ha incluido entre las entradas del diccionario. Sin embargo,/) {
+  if ($datahtml =~ /no se ha incluido entre las entradas del diccionario. Sin embargo,/ || $datahtml =~ /Su búsqueda no tuvo resultados/) {
     say "The term does not exist in the dictionary.";
     if ($datahtml =~ /Los siguientes vocablos guardan cierta similitud con el que se busca:/) {
       say "The following words have a similarity with the term you are looking for:";
