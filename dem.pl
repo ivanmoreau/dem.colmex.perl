@@ -7,10 +7,12 @@ use Getopt::Long;
 
 my $inputopt = '';
 my $markdowopt = '';
+my $ignorecacheopt = '';
 
 GetOptions(
     'input=s' => \$inputopt,
     'markdown!' => \$markdowopt,
+    'ignorecache!' => \$ignorecacheopt,
 );
 
 my $userinput = '';
@@ -23,9 +25,34 @@ if ($inputopt eq '') {
   $userinput = $inputopt;
 }
 
-# Call curl to get the data
-my $command = "curl -s https://dem.colmex.mx/Ver/".$userinput;
-$datahtml = `$command`;
+$userinput =~ s/\R//g;
+
+# Read from cache if available
+my $download = 1;
+my $cachedir = $ENV{"HOME"} . '/.cache/dem.colmex/';
+my $cachelog = $cachedir . 'cache.dat';
+# Create cache directory if it doesn't exist
+unless (-d $cachedir) {
+  mkdir $cachedir or die "Could not create cache directory $cachedir: $!";
+}
+my $file = $cachedir . $userinput . '.dat';
+if (-e $file && !$ignorecacheopt) {
+  open my $cachefh, '<', $file or die "Could not open cache file $file: $!";
+  $datahtml = do { local $/; <$cachefh> };
+  close $cachefh;
+} else {
+  my $command = 'curl -s https://dem.colmex.mx/Ver/'.$userinput;
+  $datahtml = `$command`;
+  open my $cachefh2, '>', $file or die "Could not open cache file $file: $!";
+  print $cachefh2 $datahtml;
+  close $cachefh2;
+  # Append to cache log if doesn't exist
+  if (!$ignorecacheopt) {
+    open my $cachefh3, '>>', $cachelog or die "Could not open cache file $cachelog: $!";
+    print $cachefh3 $userinput;
+    close $cachefh3;
+  }
+}
 
 # Does the term exist in the dictionary?
 if ($datahtml =~ /no se ha incluido entre las entradas del diccionario. Sin embargo,/) {
