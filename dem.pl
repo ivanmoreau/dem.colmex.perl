@@ -24,6 +24,19 @@ if ($inputopt eq '') {
   close $fh;
 }
 
+# Does the term exist in the dictionary?
+if ($userinput =~ /no se ha incluido entre las entradas del diccionario. Sin embargo,/) {
+  say "The term does not exist in the dictionary.";
+  if ($userinput =~ /Los siguientes vocablos guardan cierta similitud con el que se busca:/) {
+    say "The following words have a similarity with the term you are looking for:";
+    my $regexexp = qr/<a id="MainContent_repeaterDistancia_lbnPalabra_(\d+)"[^>]*>(.*?)<\/a>/s;
+    while ($userinput =~ m{ $regexexp }gx) {
+      say "$1: $2";
+    }
+  }
+  exit;
+}
+
 # Strip only the definitions with the numeration from the input
 my $def = qr/<span\s+id="MainContent_repeater_[a-zA-Z0-9]+_(\d+)">(.*?)<\/span>/s;
 
