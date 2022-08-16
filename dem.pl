@@ -3,9 +3,26 @@
 use strict;
 use warnings;
 use feature 'say';
+use Getopt::Long;
+
+my $inputopt = '';
+my $markdowopt = '';
+
+GetOptions(
+    'input=s' => \$inputopt,
+    'markdown!' => \$markdowopt,
+);
+
+my $userinput = '';
 
 # Read from STDIN or from a file as argument
-my $userinput = do { local $/; <> };
+if ($inputopt eq '') {
+  $userinput = do { local $/; <STDIN> };
+} else {
+  open my $fh, '<', $inputopt or die "Could not open file '$inputopt' $!";
+  $userinput = do { local $/; <$fh> };
+  close $fh;
+}
 
 # Strip only the definitions with the numeration from the input
 my $def = qr/<span\s+id="MainContent_repeater_[a-zA-Z0-9]+_(\d+)">(.*?)<\/span>/s;
@@ -82,5 +99,14 @@ $newtxt2 =~ s/\n\n\%\%BEGINSG\%\%/\n\%\%BEGINSG\%\%/g;
 $newtxt2 =~ s/(\*I\*)/\n$1./g;
 $newtxt2 =~ s/(\*[IVXLCDM]+\*\.)\n\n/$1\n/g;
 
-# Final output
-say $newtxt2;
+# Print markdown if --markdown is set
+if ($markdowopt) {
+  say $newtxt2;
+} else {
+  my $terminalrichtext = $newtxt2;
+  # Replace Bold
+  $terminalrichtext =~ s/\*([^\*]+)\*/\e[1m$1\e[0m/g;
+  # Replace Italics (use underline because italics are not widely supported)
+  $terminalrichtext =~ s/_([^_]+)_/\e[4m$1\e[0m/g;
+  say $terminalrichtext;
+}
