@@ -14,23 +14,26 @@ GetOptions(
 );
 
 my $userinput = '';
+my $datahtml = '';
 
 # Read from STDIN or from a file as argument
 if ($inputopt eq '') {
   $userinput = do { local $/; <STDIN> };
 } else {
-  open my $fh, '<', $inputopt or die "Could not open file '$inputopt' $!";
-  $userinput = do { local $/; <$fh> };
-  close $fh;
+  $userinput = $inputopt;
 }
 
+# Call curl to get the data
+my $command = "curl -s https://dem.colmex.mx/Ver/".$userinput;
+$datahtml = `$command`;
+
 # Does the term exist in the dictionary?
-if ($userinput =~ /no se ha incluido entre las entradas del diccionario. Sin embargo,/) {
+if ($datahtml =~ /no se ha incluido entre las entradas del diccionario. Sin embargo,/) {
   say "The term does not exist in the dictionary.";
-  if ($userinput =~ /Los siguientes vocablos guardan cierta similitud con el que se busca:/) {
+  if ($datahtml =~ /Los siguientes vocablos guardan cierta similitud con el que se busca:/) {
     say "The following words have a similarity with the term you are looking for:";
     my $regexexp = qr/<a id="MainContent_repeaterDistancia_lbnPalabra_(\d+)"[^>]*>(.*?)<\/a>/s;
-    while ($userinput =~ m{ $regexexp }gx) {
+    while ($datahtml =~ m{ $regexexp }gx) {
       say "$1: $2";
     }
   }
@@ -41,21 +44,21 @@ if ($userinput =~ /no se ha incluido entre las entradas del diccionario. Sin emb
 my $def = qr/<span\s+id="MainContent_repeater_[a-zA-Z0-9]+_(\d+)">(.*?)<\/span>/s;
 
 # Replace " with « and »
-$userinput =~ s/&#8220;/«/g;
-$userinput =~ s/&#8221;/»/g;
+$datahtml =~ s/&#8220;/«/g;
+$datahtml =~ s/&#8221;/»/g;
 
 # Remove <br />
-$userinput =~ s/<br \/>//g;
+$datahtml =~ s/<br \/>//g;
 # Remove empty html tags
-$userinput =~ s/<[^>^\/]+><\/[^>^\/]+>//g;
+$datahtml =~ s/<[^>^\/]+><\/[^>^\/]+>//g;
 
 # Change <i> </i> to markdown syntax for italics
-$userinput =~ s/<i>(.*?)<\/i>/_$1_/g;
+$datahtml =~ s/<i>(.*?)<\/i>/_$1_/g;
 # Change <b> </b> to markdown syntax for bold
-$userinput =~ s/<b>(.*?)<\/b>/\*$1\*/g;
+$datahtml =~ s/<b>(.*?)<\/b>/\*$1\*/g;
 
 # Add delimiters
-$userinput =~ s/(\*\d+\*)/\%\%ENDSG\%\%\n\%\%BEGINSG\%\%$1./g;
+$datahtml =~ s/(\*\d+\*)/\%\%ENDSG\%\%\n\%\%BEGINSG\%\%$1./g;
 
 # Remove newlines in text between %%BEGINSG%% and %%ENDSG%%
 # my $sgremover = s/\%\%BEGINSG\%\%\n([^\n]*)\n\%\%ENDSG\%\%/$1/g;
@@ -64,7 +67,7 @@ my $counter = 0;
 my $endpt = "";
 
 my $newtxt = "";
-while ($userinput =~ m{ $def }gx) {
+while ($datahtml =~ m{ $def }gx) {
     #Match if not empty
     if ($2) {
         #End if $1 is less than $counter
